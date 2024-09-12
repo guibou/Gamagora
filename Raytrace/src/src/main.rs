@@ -11,6 +11,16 @@ fn substractVector(a: &Vec3, b: &Vec3) -> Vec3
     Vec3{x: a.x - b.x, y: a.y - b.y, z: a.z - b.z}
 }
 
+fn dot(a: &Vec3, b: &Vec3) -> f32
+{
+    a.x * b.x + a.y * b.y + a.z * b.z
+}
+
+fn length(a: &Vec3) -> f32
+{
+    dot(a, a).sqrt()
+}
+
 struct Sphere
 {
     radius: f32,
@@ -25,7 +35,35 @@ struct Rayon
 
 fn intersectSphere(rayon: &Rayon, sphere: &Sphere) -> bool
 {
-   false
+    let oc = substractVector(&rayon.origin, &sphere.center);
+    let a = sq(length(&rayon.direction));
+    let b = 2.0 * dot(&oc, &rayon.direction);
+    let c = sq(length(&oc)) - sq(sphere.radius);
+
+    let delta = sq(b) - 4.0 * a * c;
+
+    // Is intersection (we don't care about positive or first)
+    if delta >= 0.0
+    {
+        let t1 = (-b - delta.sqrt()) / (2.0 * a);
+        let t2 = (-b + delta.sqrt()) / (2.0 * a);
+
+        if t1 >= 0.0
+        {
+            true
+        } else if t2 >= 0.0
+        {
+            true
+        }
+        else
+        {
+            false
+        }
+    }
+    else
+    {
+        false
+    }
 }
 
 
@@ -42,10 +80,10 @@ fn main() {
     let cx = w / 2.0;
     let cy = h / 2.0;
 
-    let sphere = Sphere{radius: 100.0, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
+    let radius = 180.0;
+    let sphere = Sphere{radius: radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
 
-    let radius = 100.0;
-    let focal = 50.0;
+    let focal = 10000.0;
 
     for py in 0..(h as u32)
     {
@@ -60,7 +98,7 @@ fn main() {
             let direction = substractVector(&pixel, &origin);
 
             let ray = Rayon {
-                origin: origin,
+                origin: pixel,
                 direction: direction
             };
 
