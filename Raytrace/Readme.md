@@ -41,6 +41,11 @@ We'll write our first simple camera model, as well as ray/sphere intersection
 logic. We should be able to compute a depth image of a scene composed of a few
 spheres.
 
+
+![](../assets/raytrace_intro.png)
+
+See [](./IntersectionRayonSphere.md) for details about the ray/sphere intersections.
+
 ## Light transport: direct lighting, surface behavior
 
 

@@ -1,12 +1,13 @@
 use image::{ImageBuffer, Rgb};
-use std::vec;
+
+// Vector logic
 
 struct Vec3
 {
     x:f32,y:f32,z:f32
 }
 
-fn substractVector(a: &Vec3, b: &Vec3) -> Vec3
+fn subtract_vector(a: &Vec3, b: &Vec3) -> Vec3
 {
     Vec3{x: a.x - b.x, y: a.y - b.y, z: a.z - b.z}
 }
@@ -21,6 +22,12 @@ fn length(a: &Vec3) -> f32
     dot(a, a).sqrt()
 }
 
+// Special case, compute the squared length and saves a sqrt
+fn length_squared(a: &Vec3) -> f32
+{
+    dot(a, a)
+}
+
 struct Sphere
 {
     radius: f32,
@@ -33,12 +40,14 @@ struct Rayon
     direction: Vec3
 }
 
-fn intersectSphere(rayon: &Rayon, sphere: &Sphere) -> bool
+fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> bool
 {
-    let oc = substractVector(&rayon.origin, &sphere.center);
-    let a = sq(length(&rayon.direction));
-    let b = 2.0 * dot(&oc, &rayon.direction);
-    let c = sq(length(&oc)) - sq(sphere.radius);
+    let oc = subtract_vector(&ray.origin, &sphere.center);
+
+    // Note: we can simplify the value of a if ray direction is normalized
+    let a = length_squared(&ray.direction);
+    let b = 2.0 * dot(&oc, &ray.direction);
+    let c = length_squared(&oc) - sq(sphere.radius);
 
     let delta = sq(b) - 4.0 * a * c;
 
@@ -77,11 +86,8 @@ fn main() {
     let h:f32 = 600.0;
     let mut img = ImageBuffer::new(w as u32, h as u32);
 
-    let cx = w / 2.0;
-    let cy = h / 2.0;
-
     let radius = 180.0;
-    let sphere = Sphere{radius: radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
+    let sphere = Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
 
     let focal = 10000.0;
 
@@ -93,16 +99,19 @@ fn main() {
         {
             let x = px as f32;
 
+            // This is the pixel (note: that's one corner, we don't really care about that for now)
             let pixel = Vec3{y: y*2.0 -h, x: x*2.0 - w, z: 0.0};
-            let origin = Vec3{x:0.0, y:0.0, z: -focal};
-            let direction = substractVector(&pixel, &origin);
+
+            let focal_point = Vec3{x:0.0, y:0.0, z: -focal};
+            let direction = subtract_vector(&pixel, &focal_point);
 
             let ray = Rayon {
+                // We start from the screen and note the "focal point"
                 origin: pixel,
-                direction: direction
+                direction
             };
 
-            if intersectSphere(&ray, &sphere)
+            if intersect_sphere(&ray, &sphere)
             {
                img.put_pixel(px, py, Rgb([255 as u8, 255, 255]));
             } else
