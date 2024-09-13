@@ -40,7 +40,13 @@ struct Rayon
     direction: Vec3
 }
 
-fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> bool
+fn get_intersection_distance(ray: &Rayon, t:f32) -> f32
+{
+   t * length(&ray.direction)
+}
+
+
+fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> Option<f32>
 {
     let oc = subtract_vector(&ray.origin, &sphere.center);
 
@@ -59,19 +65,19 @@ fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> bool
 
         if t1 >= 0.0
         {
-            true
+            Some(t1)
         } else if t2 >= 0.0
         {
-            true
+            Some(t2)
         }
         else
         {
-            false
+            None
         }
     }
     else
     {
-        false
+        None
     }
 }
 
