@@ -117,15 +117,40 @@ fn main() {
                 direction
             };
 
-            if intersect_sphere(&ray, &sphere)
+            let it = intersect_sphere(&ray, &sphere);
+
+            match it
             {
-               img.put_pixel(px, py, Rgb([255 as u8, 255, 255]));
-            } else
-            {
-               img.put_pixel(px, py, Rgb([0 as u8, 100, 50]));
+                // We have some intersection
+                Some(itf) =>
+                {
+                   // Compute the distance in "scene"-space
+                   let distance = get_intersection_distance(&ray, itf);
+
+                   // normalize it (well, here we normalize by multily by 1)
+                   // This part is the "tonemapping", e.g., we decide how the measure (for now, a
+                   // distance), which is between 0 and infinity, is associated to the value in the
+                   // final image.
+                   //
+                   // We have a naive tonemapping, here [0, 255] is linearly mappet to [0, 255] and
+                   // values >255 are clamped to 255 (well, actually, it depends on the
+                   // implementation of rust, what does it do with the u8. That's a good question.
+                   // I don't really know... And now I'm afraid, because it can be an undefined
+                   // behavior... Let's document myself about that.
+                   //
+                   // According to
+                   // https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions,
+                   // the cast using "as" is a "saturating" cast, it will be clamped to the biggest
+                   // (or smallest) value of the destination type.
+                   let v = (distance * 1.0) as u8;
+                   img.put_pixel(px, py, Rgb([v, v, v]));
+                }
+                None => 
+                {
+                   img.put_pixel(px, py, Rgb([0 as u8, 100, 50]));
+                }
             }
         }
-
     }
 
     img.save("result.png").unwrap();

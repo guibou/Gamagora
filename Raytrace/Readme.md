@@ -46,6 +46,44 @@ spheres.
 
 See [](./IntersectionRayonSphere.md) for details about the ray/sphere intersections.
 
+See [](./TypeSafety.md) for discussion about undefined behavior and how to type
+functions (e.g. `intersect_ray_sphere`) so you are less at risk of coding
+something wrong.
+
+### Tone mapping
+
+Our first implementation computes the depth of the sphere. However, this depth
+is between `0` and infinity, so how do we store that in the finale image (which accepts values between 0 and 255 on each channel)
+
+This problem is known as tonemapping, and there is no good solution.
+
+In photography, that's either done automatically by your device which pick a
+correct exposure in order to have a picture which is not too dark neither too
+bright.
+
+You can also manually decide what exposure you'll use.
+
+Then, you can, later, in a postprocessing tool, also decide how the values
+between the min and max are remapped, in order to brighten the darks and darken
+the lights.
+
+The question is to implement the function `RealMeasure -> StoredValue`.
+
+For now, we implemented a naive function. Values are linearly mapped between 0
+and a fixed threshold to `[0..255]` and values above are clamped.
+
+In the future, we may compute the threshold by picking the maximum value of the
+pixels (need a temporary buffer) and then doing the conversion.
+
+# Exercices
+
+- Implement the raytracing engine so you can display the depth of a sphere
+- Implements many spheres (e.g. a list of spheres). Please ensure that depth is correct when spheres overlaps.
+- Implements an automated tone-mapper for your depth: it picks the largest
+  depth and maps it to 255, and the smallest depth is mapped to 0. What to do
+  when there is no intersection? Suggestion: map intersection to greyscale, and
+  for no intersection, use a nice pinkish color.
+
 ## Light transport: direct lighting, surface behavior
 
 
