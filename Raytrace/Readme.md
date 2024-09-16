@@ -87,12 +87,56 @@ pixels (need a temporary buffer) and then doing the conversion.
 ## Light transport: direct lighting, surface behavior
 
 
+![](../assets/direct_lighting_schema.png)
+
+
+We want to compute light on point `P = Ray.origin + t * Ray.direction`.
+
+We'll get into details later, but for now:
+
+```
+L_o = L_e + V(P, L_p) * L_emit / D ^ 2 * Albedo * | N . L_i |
+```
+
+Where:
+
+- `L_o` is the light outgoing from the surface, which is composed of:
+  - `L_e` the light emited by the surface
+  - The light `L_i` incoming to the surface, transfered by the 
+
+The light `L_i` depends on:
+
+- the visibility, can we see the point light. `V(P, L_p)`.
+- the quatity of light emited by the light `L_emit`
+- the distance to the light `1 / D^`
+- The quantity of light transfered by the surface, `Albedo` (e.g. the "color" of the surface).
+- The "form factor", e.g. `N . L_i` where `N` is the normal to the surface.
+
+Notes:
+
+- This is a simplification of light transfert, with a unique point light and a
+  "Lambertian" surface which reflect light the same in all direction.
+- Later, the `Albedo` could be turned into a function which depends on the incoming and outgoing vector, light wavelength, time, ...
+- `ALbedo` is an amount transmitted, so between 0 and 1
+- `L_emit` is a quantity of light, so >= 0, but not bounded.
+
+
 ![](../assets/direct_lighting.png)
 
 At intersection point, we'll compute the amount of light from directly visible
 light and scattered by surface toward the camera.
 
 And also take into account basic visibily (e.g. is the light able to lit the surface)
+
+
+## Exercices
+
+- Implemnt direct lighting over a few objects with at least one point light
+- How does it behaves with multiples lights ? (Hint: light is "additive")
+- Implement different objet "color"
+- Implement visibility: shot a ray from `P` toward `L_p` and see if there is
+  any intersection *BETWEEN* the surface and the light. You'll see some weird
+  noise, that's normal. Do you know why?
 
 ## Light transport: indirect lighting (glass, mirors). Sampling introduction
 
