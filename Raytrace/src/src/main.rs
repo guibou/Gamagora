@@ -1,4 +1,5 @@
 use image::{ImageBuffer, Rgb};
+use std::cmp;
 
 // Vector logic
 
@@ -10,6 +11,21 @@ struct Vec3
 fn subtract_vector(a: &Vec3, b: &Vec3) -> Vec3
 {
     Vec3{x: a.x - b.x, y: a.y - b.y, z: a.z - b.z}
+}
+
+fn add_vector(a: &Vec3, b: &Vec3) -> Vec3
+{
+    Vec3{x: a.x + b.x, y: a.y + b.y, z: a.z + b.z}
+}
+
+fn mul_vector(a: &Vec3, b: &Vec3) -> Vec3
+{
+    Vec3{x: a.x * b.x, y: a.y * b.y, z: a.z * b.z}
+}
+
+fn mul_scalar_vector(a: f32, b: &Vec3) -> Vec3
+{
+    Vec3{x: a * b.x, y: a * b.y, z: a * b.z}
 }
 
 fn dot(a: &Vec3, b: &Vec3) -> f32
@@ -26,6 +42,13 @@ fn length(a: &Vec3) -> f32
 fn length_squared(a: &Vec3) -> f32
 {
     dot(a, a)
+}
+
+fn normalize(a: &Vec3) -> Vec3
+{
+  let l = length(a);
+  Vec3{x: a.x / l, y: a.y / l, z: a.z / l}
+
 }
 
 struct Sphere
@@ -45,8 +68,33 @@ fn get_intersection_distance(ray: &Rayon, t:f32) -> f32
    t * length(&ray.direction)
 }
 
+fn get_intersection_point_t(ray: &Rayon, t:f32) -> Vec3
+{
+   add_vector(&ray.origin, &mul_scalar_vector(t, &ray.direction))
+}
 
-fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> Option<f32>
+struct Intersection
+{
+    point: Vec3,
+    normal: Vec3,
+    distance: f32
+}
+
+fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> Option<Intersection>
+{
+    match intersect_sphere_t(&ray, &sphere)
+    {
+      None => None,
+      Some(t) => {
+          let p = get_intersection_point_t(ray, t);
+          let n = normalize(&subtract_vector(&p, &sphere.center));
+
+          Some(Intersection{point: p, normal: n, distance: t * length(&ray.direction)})
+      }
+    }
+}
+
+fn intersect_sphere_t(ray: &Rayon, sphere: &Sphere) -> Option<f32>
 {
     let oc = subtract_vector(&ray.origin, &sphere.center);
 
@@ -87,6 +135,12 @@ fn sq(x:f32) -> f32
     x * x
 }
 
+struct Light
+{
+    origin: Vec3,
+    emission: Vec3
+}
+
 fn main() {
     let w:f32 = 800.0;
     let h:f32 = 600.0;
@@ -94,6 +148,7 @@ fn main() {
 
     let radius = 180.0;
     let sphere = Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
+    let light = Light{origin: Vec3{x: 1000.0, y: 0.0, z: 200.0}, emission: Vec3{x: 100000.0, y:100000.0, z:100000.0}};
 
     let focal = 10000.0;
 
@@ -117,41 +172,46 @@ fn main() {
                 direction
             };
 
-            let it = intersect_sphere(&ray, &sphere);
+            let it_m = intersect_sphere(&ray, &sphere);
 
-            match it
+            match it_m
             {
                 // We have some intersection
-                Some(itf) =>
+                Some(it) =>
                 {
                    // Compute the distance in "scene"-space
-                   let distance = get_intersection_distance(&ray, itf);
+                   let albedo = Vec3{x: 1.0, y: 0.0, z: 0.0};
 
-                   // normalize it (well, here we normalize by multily by 1)
-                   // This part is the "tonemapping", e.g., we decide how the measure (for now, a
-                   // distance), which is between 0 and infinity, is associated to the value in the
-                   // final image.
-                   //
-                   // We have a naive tonemapping, here [0, 255] is linearly mappet to [0, 255] and
-                   // values >255 are clamped to 255 (well, actually, it depends on the
-                   // implementation of rust, what does it do with the u8. That's a good question.
-                   // I don't really know... And now I'm afraid, because it can be an undefined
-                   // behavior... Let's document myself about that.
-                   //
-                   // According to
-                   // https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions,
-                   // the cast using "as" is a "saturating" cast, it will be clamped to the biggest
-                   // (or smallest) value of the destination type.
-                   let v = (distance * 1.0) as u8;
-                   img.put_pixel(px, py, Rgb([v, v, v]));
+                   let to_light = subtract_vector(&light.origin, &it.point);
+                   let light_distance = length(&to_light);
+                   let cos = (dot(&normalize(&to_light), &it.normal)).clamp(0.0, 1.0);
+                   println!("{}", cos);
+
+                   let v = mul_vector(&mul_scalar_vector(cos / light_distance, &albedo), &light.emission);
+                   let pixel = tonemap(&v, 1.0);
+
+                   img.put_pixel(px, py, pixel)
                 }
                 None => 
                 {
-                   img.put_pixel(px, py, Rgb([0 as u8, 100, 50]));
+                   img.put_pixel(px, py, Rgb([0 as u8, 0, 0]));
                 }
             }
         }
     }
 
     img.save("result.png").unwrap();
+}
+
+fn tonemap(v: &Vec3, scale: f32) -> Rgb<u8>
+{
+  let r = v.x * scale;
+  let g = v.y * scale;
+  let b = v.z * scale;
+
+  // According to
+  // https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions,
+  // the cast using "as" is a "saturating" cast, it will be clamped to the biggest
+  // (or smallest) value of the destination type.
+  Rgb([r as u8, g as u8, b as u8])
 }
