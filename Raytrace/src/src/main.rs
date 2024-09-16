@@ -141,6 +141,12 @@ struct Light
     emission: Vec3
 }
 
+struct Scene
+{
+    lights: Vec<Light>,
+    spheres: Vec<Sphere>
+}
+
 fn main() {
     let w:f32 = 800.0;
     let h:f32 = 600.0;
@@ -149,6 +155,8 @@ fn main() {
     let radius = 180.0;
     let sphere = Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
     let light = Light{origin: Vec3{x: 1000.0, y: 0.0, z: 200.0}, emission: Vec3{x: 100000.0, y:100000.0, z:100000.0}};
+
+    let scene = Scene{lights: vec![light], spheres: vec![sphere]};
 
     let focal = 10000.0;
 
@@ -172,8 +180,9 @@ fn main() {
                 direction
             };
 
-            let it_m = intersect_sphere(&ray, &sphere);
+            let it_m = intersect_sphere(&ray, &scene.spheres[0]);
 
+            let mut contrib = Vec3{x: 0.0, y: 0.0, z: 0.0};
             match it_m
             {
                 // We have some intersection
@@ -182,21 +191,25 @@ fn main() {
                    // Compute the distance in "scene"-space
                    let albedo = Vec3{x: 1.0, y: 0.0, z: 0.0};
 
-                   let to_light = subtract_vector(&light.origin, &it.point);
-                   let light_distance = length(&to_light);
-                   let cos = (dot(&normalize(&to_light), &it.normal)).clamp(0.0, 1.0);
-                   println!("{}", cos);
+                   for light in &scene.lights
+                   {
+                     let to_light = subtract_vector(&light.origin, &it.point);
+                     let light_distance = length(&to_light);
+                     let cos = (dot(&normalize(&to_light), &it.normal)).clamp(0.0, 1.0);
+                     println!("{}", cos);
 
-                   let v = mul_vector(&mul_scalar_vector(cos / light_distance, &albedo), &light.emission);
-                   let pixel = tonemap(&v, 1.0);
+                     let v = mul_vector(&mul_scalar_vector(cos / light_distance, &albedo), &light.emission);
 
-                   img.put_pixel(px, py, pixel)
+                     contrib = add_vector(&contrib, &v);
+                   }
                 }
                 None => 
                 {
-                   img.put_pixel(px, py, Rgb([0 as u8, 0, 0]));
                 }
             }
+
+            let pixel = tonemap(&contrib, 1.0);
+            img.put_pixel(px, py, pixel)
         }
     }
 
