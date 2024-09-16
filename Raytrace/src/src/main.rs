@@ -154,9 +154,12 @@ fn main() {
 
     let radius = 180.0;
     let sphere = Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
-    let light = Light{origin: Vec3{x: 1000.0, y: 0.0, z: 200.0}, emission: Vec3{x: 100000.0, y:100000.0, z:100000.0}};
+    let lights = vec![
+          Light{origin: Vec3{x: 1000.0, y: 0.0, z: 200.0}, emission: Vec3{x: 200000.0, y:200000.0, z:200000.0}},
+          Light{origin: Vec3{x: 1.0, y: -1000.0, z: 200.0}, emission: Vec3{x: 100000.0, y:0.0, z:0.0}}
+         ];
 
-    let scene = Scene{lights: vec![light], spheres: vec![sphere]};
+    let scene = Scene{lights, spheres: vec![sphere]};
 
     let focal = 10000.0;
 
@@ -189,14 +192,13 @@ fn main() {
                 Some(it) =>
                 {
                    // Compute the distance in "scene"-space
-                   let albedo = Vec3{x: 1.0, y: 0.0, z: 0.0};
+                   let albedo = Vec3{x: 1.0, y: 1.0, z: 1.0};
 
                    for light in &scene.lights
                    {
                      let to_light = subtract_vector(&light.origin, &it.point);
                      let light_distance = length(&to_light);
                      let cos = (dot(&normalize(&to_light), &it.normal)).clamp(0.0, 1.0);
-                     println!("{}", cos);
 
                      let v = mul_vector(&mul_scalar_vector(cos / light_distance, &albedo), &light.emission);
 
