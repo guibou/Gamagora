@@ -2,7 +2,7 @@ use image::{ImageBuffer, Rgb};
 use std::cmp;
 
 // Vector logic
-
+#[derive(Copy, Clone)]
 struct Vec3
 {
     x:f32,y:f32,z:f32
@@ -54,7 +54,8 @@ fn normalize(a: &Vec3) -> Vec3
 struct Sphere
 {
     radius: f32,
-    center: Vec3
+    center: Vec3,
+    albedo: Vec3
 }
 
 struct Rayon
@@ -77,7 +78,8 @@ struct Intersection
 {
     point: Vec3,
     normal: Vec3,
-    distance: f32
+    distance: f32,
+    albedo: Vec3
 }
 
 fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> Option<Intersection>
@@ -89,9 +91,36 @@ fn intersect_sphere(ray: &Rayon, sphere: &Sphere) -> Option<Intersection>
           let p = get_intersection_point_t(ray, t);
           let n = normalize(&subtract_vector(&p, &sphere.center));
 
-          Some(Intersection{point: p, normal: n, distance: t * length(&ray.direction)})
+          Some(Intersection{point: p, normal: n, distance: t * length(&ray.direction), albedo: sphere.albedo})
       }
     }
+}
+
+fn intersect_spheres(ray: &Rayon, spheres: &Vec<Sphere>) -> Option<Intersection>
+{
+    let mut currentItM = None;
+
+    for sphere in spheres
+    {
+        match intersect_sphere(ray, sphere)
+        {
+            None => {}
+            Some(newIt) => match currentItM
+            {
+                None => currentItM = Some(newIt),
+                Some(currentIt) => if newIt.distance < currentIt.distance
+                {
+                    currentItM = Some(newIt)
+                }
+                else
+                {
+                    currentItM = Some(currentIt)
+                }
+            }
+        }
+    }
+
+    currentItM
 }
 
 fn intersect_sphere_t(ray: &Rayon, sphere: &Sphere) -> Option<f32>
@@ -153,15 +182,24 @@ fn main() {
     let mut img = ImageBuffer::new(w as u32, h as u32);
 
     let radius = 180.0;
-    let sphere = Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}};
+    let spheres = vec![
+         Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}},
+         Sphere{radius, center: Vec3{x: -300.0, y: -300.0, z: 200.0}, albedo: Vec3{x: 0.0, y: 0.0, z: 1.0}},
+         // Small sphere
+         Sphere{radius: 40.0, center: Vec3{x: 0.0, y: 0.0, z: 50.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}},
+
+         // Sol
+         Sphere{radius: 50000.0, center: Vec3{x: 0.0, y: 50000.0 + 800.0, z: 0.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}},
+       ];
     let lights = vec![
           Light{origin: Vec3{x: 1000.0, y: 0.0, z: 200.0}, emission: Vec3{x: 200000.0, y:200000.0, z:200000.0}},
-          Light{origin: Vec3{x: 1.0, y: -1000.0, z: 200.0}, emission: Vec3{x: 100000.0, y:0.0, z:0.0}}
+          Light{origin: Vec3{x: 1.0, y: -1000.0, z: 200.0}, emission: Vec3{x: 100000.0, y:0.0, z:0.0}},
+          Light{origin: Vec3{x: -1000.0, y: 1000.0, z: 200.0}, emission: Vec3{x: 0.0, y:100000.0, z:0.0}}
          ];
 
-    let scene = Scene{lights, spheres: vec![sphere]};
+    let scene = Scene{lights, spheres};
 
-    let focal = 10000.0;
+    let focal = 1000.0;
 
     for py in 0..(h as u32)
     {
@@ -183,7 +221,7 @@ fn main() {
                 direction
             };
 
-            let it_m = intersect_sphere(&ray, &scene.spheres[0]);
+            let it_m = intersect_spheres(&ray, &scene.spheres);
 
             let mut contrib = Vec3{x: 0.0, y: 0.0, z: 0.0};
             match it_m
@@ -191,16 +229,13 @@ fn main() {
                 // We have some intersection
                 Some(it) =>
                 {
-                   // Compute the distance in "scene"-space
-                   let albedo = Vec3{x: 1.0, y: 1.0, z: 1.0};
-
                    for light in &scene.lights
                    {
                      let to_light = subtract_vector(&light.origin, &it.point);
                      let light_distance = length(&to_light);
                      let cos = (dot(&normalize(&to_light), &it.normal)).clamp(0.0, 1.0);
 
-                     let v = mul_vector(&mul_scalar_vector(cos / light_distance, &albedo), &light.emission);
+                     let v = mul_vector(&mul_scalar_vector(cos / light_distance, &it.albedo), &light.emission);
 
                      contrib = add_vector(&contrib, &v);
                    }
@@ -210,7 +245,7 @@ fn main() {
                 }
             }
 
-            let pixel = tonemap(&contrib, 1.0);
+            let pixel = tonemap(&contrib, 2.0);
             img.put_pixel(px, py, pixel)
         }
     }
