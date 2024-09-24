@@ -1,7 +1,9 @@
 use super::vec::*;
 use super::ray::*;
+use super::cube::*;
 
 // primitives
+#[derive(Copy, Clone)]
 pub struct Sphere
 {
     pub radius: f32,
@@ -111,4 +113,104 @@ pub fn sq(x:f32) -> f32
     x * x
 }
 
+// Intersection
 
+#[derive(Clone)]
+pub enum ObjectHierarchy
+{
+    Leaf { spheres: Vec<Sphere>, bounding_box: AABB },
+    Node { bounding_box: AABB, left_tree: Box<ObjectHierarchy>, right_tree: Box< ObjectHierarchy>},
+}
+
+// Build a hierarchy by splitting on the largest axis
+pub fn build_hierarchy (mut spheres: Vec<Sphere>) -> Box<ObjectHierarchy>
+{
+   let mut aabb = sphere_to_aabb(&spheres[0]);
+   for sphere in &spheres
+   {
+       aabb = aabb.union(&sphere_to_aabb(sphere));
+   }
+
+   if spheres.len() < 10
+   {
+      Box::new(ObjectHierarchy::Leaf{spheres, bounding_box: aabb})
+   }
+   else
+   {
+       match aabb.largest_axis()
+       {
+           Axis::X => spheres.sort_by(|a, b| a.center.x.partial_cmp(&b.center.x).unwrap()),
+           Axis::Y => spheres.sort_by(|a, b| a.center.y.partial_cmp(&b.center.y).unwrap()),
+           Axis::Z => spheres.sort_by(|a, b| a.center.z.partial_cmp(&b.center.z).unwrap()),
+       }
+
+       let mut left_spheres = vec![];
+       let mut right_spheres = vec![];
+       let cut = spheres.len() / 2;
+       let len = spheres.len();
+
+       for i in 0..cut
+       {
+           left_spheres.push(spheres[i]);
+       }
+
+       for i in cut..len
+       {
+           right_spheres.push(spheres[i]);
+       }
+
+       let left_tree = build_hierarchy(left_spheres);
+       let right_tree = build_hierarchy(right_spheres);
+
+       Box::new(ObjectHierarchy::Node{bounding_box: aabb,
+                             left_tree, right_tree})
+   }
+}
+
+impl<'a> Intersectable for ObjectHierarchy
+{
+   fn intersect(&self, ray: &Ray) -> Option<Intersection>
+   {
+       match self
+       {
+           ObjectHierarchy::Leaf{bounding_box, spheres} =>
+             match intersect_cube(&ray, &bounding_box)
+             {
+                 None => None,
+                 Some(_) => spheres.intersect(&ray)
+             }
+           ObjectHierarchy::Node{bounding_box, left_tree, right_tree} => 
+             match intersect_cube(&ray, &bounding_box)
+             {
+                 None => None,
+                 Some(_) => {
+                     let it_left = left_tree.intersect(&ray);
+                     let it_right = right_tree.intersect(&ray);
+
+                     match it_left
+                     {
+                        None => it_right,
+                        Some(it) => match it_right
+                        {
+                            None => Some(it),
+                            Some(it2) => if it.distance < it2.distance
+                            {
+                                Some(it)
+                            }
+                            else
+                            {
+                                Some(it2)
+                            }
+                        }
+                    }
+                 }
+             }
+        }
+   }
+}
+
+fn sphere_to_aabb(sphere: &Sphere) -> AABB
+{
+    let r = Vec3{x: sphere.radius, y: sphere.radius, z: sphere.radius};
+    AABB{p_min: sphere.center - r, p_max: sphere.center + r}
+}

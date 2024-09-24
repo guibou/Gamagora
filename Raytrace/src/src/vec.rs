@@ -29,6 +29,22 @@ impl Vec3 {
     let l = self.length();
     Vec3{x: self.x / l, y: self.y / l, z: self.z / l}
   }
+
+  pub fn minv(&self, other: &Vec3) -> Vec3
+  {
+      Vec3{x:self.x.min(other.x)
+          ,y:self.y.min(other.y)
+          ,z:self.z.min(other.z)
+      }
+  }
+
+  pub fn maxv(&self, other: &Vec3) -> Vec3
+  {
+      Vec3{x:self.x.max(other.x)
+          ,y:self.y.max(other.y)
+          ,z:self.z.max(other.z)
+      }
+  }
 }
 
 impl Add for Vec3

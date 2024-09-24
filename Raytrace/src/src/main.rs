@@ -19,7 +19,7 @@ struct Light
 struct Scene
 {
     lights: Vec<Light>,
-    spheres: Vec<Sphere>
+    objects: Box<ObjectHierarchy>
 }
 
 fn main() {
@@ -27,7 +27,7 @@ fn main() {
     let h:f32 = 600.0;
     let mut img = ImageBuffer::new(w as u32, h as u32);
 
-    let radius = 180.0;
+    /*
     let spheres = vec![
          Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}},
          Sphere{radius, center: Vec3{x: -300.0, y: -300.0, z: 200.0}, albedo: Vec3{x: 0.0, y: 0.0, z: 1.0}},
@@ -37,13 +37,44 @@ fn main() {
          // Sol
          Sphere{radius: 50000.0, center: Vec3{x: 0.0, y: 50000.0 + 800.0, z: 0.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}},
        ];
+    */
     let lights = vec![
           Light{origin: Vec3{x: 5000.0, y: 0.0, z: 0.0}, emission: Vec3{x: 400000.0, y:400000.0, z:400000.0}},
           Light{origin: Vec3{x: 1.0, y: -1000.0, z: 0.0}, emission: Vec3{x: 100000.0, y:0.0, z:0.0}},
           Light{origin: Vec3{x: -1000.0, y: 1000.0, z: 0.0}, emission: Vec3{x: 0.0, y:100000.0, z:0.0}}
          ];
 
-    let scene = Scene{lights, spheres};
+    let mut spheres = vec![];
+    let n = 100;
+    let d = 300.0 / (n as f32);
+    let radius = 80.0 / (n as f32);
+
+    /*
+     * timings
+     * n = 1: 115ms
+     * n = 2: 164ms
+     * n = 5: 2.29s
+     * n = 10: 17s (8000 spheres)
+     * n = 15: 71s (27000 spheres)
+     */
+    for i in -n..n
+    {
+        for j in -n..n
+        {
+            for k in -n..n
+            {
+                spheres.push(Sphere{radius, albedo: Vec3{x:1.0, y:1.0, z:1.0},
+                            center: Vec3{x:(i as f32) * d, y: (j as f32) * d, z: 200.0 + (k as f32) * d}});
+
+            }
+        }
+    }
+
+    println!("Nb spheres: {}", spheres.len());
+
+    let scene = Scene{lights, objects: build_hierarchy(spheres)};
+
+    println!("Rendering starts");
 
     let focal = 1000.0;
 
@@ -67,7 +98,7 @@ fn main() {
                 direction
             };
 
-            let it_m = scene.spheres.intersect(&ray);
+            let it_m = scene.objects.intersect(&ray);
 
             let mut contrib = Vec3{x: 0.0, y: 0.0, z: 0.0};
             match it_m
@@ -97,7 +128,7 @@ fn main() {
                      // intersection. Instead we want to find any intersection between the point
                      // and the light. So we can implement an early exit. We also don't care about
                      // material / normal / ... at intersection point.
-                     let it_shadow = scene.spheres.intersect(&shadow_ray);
+                     let it_shadow = scene.objects.intersect(&shadow_ray);
 
                      let visibility = match it_shadow
                         {

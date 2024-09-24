@@ -1,24 +1,53 @@
 use super::vec::Vec3;
 use super::ray::*;
 
-pub struct Cube
+#[derive(Copy, Clone)]
+pub struct AABB
 {
     pub p_min: Vec3,
     pub p_max: Vec3
 }
 
+pub enum Axis { X, Y, Z }
+
+impl AABB
+{
+    pub fn union(&self, other: &AABB) -> AABB
+    {
+        AABB{p_min: self.p_min.minv(&other.p_min),
+             p_max: self.p_max.maxv(&other.p_max)}
+    }
+
+    pub fn largest_axis(&self) -> Axis
+    {
+        let axis = self.p_max - self.p_min;
+        if axis.x >= axis.y && axis.x >= axis.z
+        {
+            Axis::X
+        }
+        else if axis.y >= axis.z
+        {
+            Axis::Y
+        }
+        else
+        {
+            Axis::Z
+        }
+    }
+}
+
 /*
 -- Based on https://tavianator.com/fast-branchless-raybounding-box-intersections/
 -- | Returns the entry and exit point of ray/box intersection. That is,
--- @rayIntersectCubeRange ray box@ returns @Just (tmin, tmax)@ meaning that the
+-- @rayIntersectAABBRange ray box@ returns @Just (tmin, tmax)@ meaning that the
 -- ray enter the box at @tmin@ and exit it at @tmax@, which can be negative.
 */
 
-pub fn intersect_cube(ray: &Ray, cube: &Cube) -> Option<f32>
+pub fn intersect_cube(ray: &Ray, cube: &AABB) -> Option<f32>
 {
 /*
  *
-rayIntersectCubeRange (Ray (P ox oy oz) (N dx dy dz)) (Box (P pminx pminy pminz) (P pmaxx pmaxy pmaxz))
+rayIntersectAABBRange (Ray (P ox oy oz) (N dx dy dz)) (Box (P pminx pminy pminz) (P pmaxx pmaxy pmaxz))
   | tmax'' < tmin'' = Nothing
   | otherwise = Just (tmin'', tmax'')
   where
