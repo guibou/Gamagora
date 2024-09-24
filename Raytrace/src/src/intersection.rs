@@ -65,13 +65,13 @@ fn intersect(&self, ray: &Ray) -> Option<Intersection>
 {
     match intersect_sphere(&ray, &self)
     {
-      None => None,
       Some(t) => {
           let p = get_intersection_point_t(ray, t);
           let n = normalize(&subtract_vector(&p, &self.center));
 
           Some(Intersection{point: p, normal: n, distance: t * length(&ray.direction), albedo: self.albedo})
       }
+      None => None,
     }
 }
 }
@@ -80,29 +80,29 @@ impl Intersectable for Vec<Sphere>
 {
 fn intersect(&self, ray: &Ray) -> Option<Intersection>
 {
-    let mut currentItM = None;
+    let mut current_it_m = None;
 
     for obj in self
     {
         match obj.intersect(ray)
         {
             None => {}
-            Some(newIt) => match currentItM
+            Some(new_it) => match current_it_m
             {
-                None => currentItM = Some(newIt),
-                Some(currentIt) => if newIt.distance < currentIt.distance
+                None => current_it_m = Some(new_it),
+                Some(current_it) => if new_it.distance < current_it.distance
                 {
-                    currentItM = Some(newIt)
+                    current_it_m = Some(new_it)
                 }
                 else
                 {
-                    currentItM = Some(currentIt)
+                    current_it_m = Some(current_it)
                 }
             }
         }
     }
 
-    currentItM
+    current_it_m
 }
 }
 
