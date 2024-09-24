@@ -171,6 +171,9 @@ will be indirect diffuse lighting, but "the sky is the limit".
 
 ![](../assets/bvh.png)
 
+
+![](assets/bvh_drawing.png)
+
 Ray/scene intersection is `O(n)` (n being the number of objects). If we shoot
 multiples ray per pixel, on multiples pixel, on scenes composed of billions of
 objects, that's impossible. Introducing acceleration structures which makes

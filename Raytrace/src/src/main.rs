@@ -1,168 +1,13 @@
-use image::{ImageBuffer, Rgb};
-use std::cmp;
+mod vec;
+mod tonemap;
+mod ray;
+mod intersection;
 
-// Vector logic
-#[derive(Copy, Clone)]
-struct Vec3
-{
-    x:f32,y:f32,z:f32
-}
-
-fn subtract_vector(a: &Vec3, b: &Vec3) -> Vec3
-{
-    Vec3{x: a.x - b.x, y: a.y - b.y, z: a.z - b.z}
-}
-
-fn add_vector(a: &Vec3, b: &Vec3) -> Vec3
-{
-    Vec3{x: a.x + b.x, y: a.y + b.y, z: a.z + b.z}
-}
-
-fn mul_vector(a: &Vec3, b: &Vec3) -> Vec3
-{
-    Vec3{x: a.x * b.x, y: a.y * b.y, z: a.z * b.z}
-}
-
-fn mul_scalar_vector(a: f32, b: &Vec3) -> Vec3
-{
-    Vec3{x: a * b.x, y: a * b.y, z: a * b.z}
-}
-
-fn dot(a: &Vec3, b: &Vec3) -> f32
-{
-    a.x * b.x + a.y * b.y + a.z * b.z
-}
-
-fn length(a: &Vec3) -> f32
-{
-    dot(a, a).sqrt()
-}
-
-// Special case, compute the squared length and saves a sqrt
-fn length_squared(a: &Vec3) -> f32
-{
-    dot(a, a)
-}
-
-fn normalize(a: &Vec3) -> Vec3
-{
-  let l = length(a);
-  Vec3{x: a.x / l, y: a.y / l, z: a.z / l}
-
-}
-
-struct Sphere
-{
-    radius: f32,
-    center: Vec3,
-    albedo: Vec3
-}
-
-struct Ray
-{
-    origin: Vec3,
-    direction: Vec3
-}
-
-fn get_intersection_distance(ray: &Ray, t:f32) -> f32
-{
-   t * length(&ray.direction)
-}
-
-fn get_intersection_point_t(ray: &Ray, t:f32) -> Vec3
-{
-   add_vector(&ray.origin, &mul_scalar_vector(t, &ray.direction))
-}
-
-struct Intersection
-{
-    point: Vec3,
-    normal: Vec3,
-    distance: f32,
-    albedo: Vec3
-}
-
-fn intersect_sphere(ray: &Ray, sphere: &Sphere) -> Option<Intersection>
-{
-    match intersect_sphere_t(&ray, &sphere)
-    {
-      None => None,
-      Some(t) => {
-          let p = get_intersection_point_t(ray, t);
-          let n = normalize(&subtract_vector(&p, &sphere.center));
-
-          Some(Intersection{point: p, normal: n, distance: t * length(&ray.direction), albedo: sphere.albedo})
-      }
-    }
-}
-
-fn intersect_spheres(ray: &Ray, spheres: &Vec<Sphere>) -> Option<Intersection>
-{
-    let mut currentItM = None;
-
-    for sphere in spheres
-    {
-        match intersect_sphere(ray, sphere)
-        {
-            None => {}
-            Some(newIt) => match currentItM
-            {
-                None => currentItM = Some(newIt),
-                Some(currentIt) => if newIt.distance < currentIt.distance
-                {
-                    currentItM = Some(newIt)
-                }
-                else
-                {
-                    currentItM = Some(currentIt)
-                }
-            }
-        }
-    }
-
-    currentItM
-}
-
-fn intersect_sphere_t(ray: &Ray, sphere: &Sphere) -> Option<f32>
-{
-    let oc = subtract_vector(&ray.origin, &sphere.center);
-
-    // Note: we can simplify the value of a if ray direction is normalized
-    let a = length_squared(&ray.direction);
-    let b = 2.0 * dot(&oc, &ray.direction);
-    let c = length_squared(&oc) - sq(sphere.radius);
-
-    let delta = sq(b) - 4.0 * a * c;
-
-    // Is intersection (we don't care about positive or first)
-    if delta >= 0.0
-    {
-        let t1 = (-b - delta.sqrt()) / (2.0 * a);
-        let t2 = (-b + delta.sqrt()) / (2.0 * a);
-
-        if t1 >= 0.0
-        {
-            Some(t1)
-        } else if t2 >= 0.0
-        {
-            Some(t2)
-        }
-        else
-        {
-            None
-        }
-    }
-    else
-    {
-        None
-    }
-}
-
-
-fn sq(x:f32) -> f32
-{
-    x * x
-}
+use image::ImageBuffer;
+use vec::*;
+use tonemap::*;
+use ray::*;
+use intersection::*;
 
 struct Light
 {
@@ -221,7 +66,7 @@ fn main() {
                 direction
             };
 
-            let it_m = intersect_spheres(&ray, &scene.spheres);
+            let it_m = scene.spheres.intersect(&ray);
 
             let mut contrib = Vec3{x: 0.0, y: 0.0, z: 0.0};
             match it_m
@@ -251,7 +96,7 @@ fn main() {
                      // intersection. Instead we want to find any intersection between the point
                      // and the light. So we can implement an early exit. We also don't care about
                      // material / normal / ... at intersection point.
-                     let it_shadow = intersect_spheres(&shadow_ray, &scene.spheres);
+                     let it_shadow = scene.spheres.intersect(&shadow_ray);
 
                      let visibility = match it_shadow
                         {
@@ -277,17 +122,4 @@ fn main() {
     }
 
     img.save("result.png").unwrap();
-}
-
-fn tonemap(v: &Vec3, scale: f32) -> Rgb<u8>
-{
-  let r = v.x * scale;
-  let g = v.y * scale;
-  let b = v.z * scale;
-
-  // According to
-  // https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions,
-  // the cast using "as" is a "saturating" cast, it will be clamped to the biggest
-  // (or smallest) value of the destination type.
-  Rgb([r as u8, g as u8, b as u8])
 }
