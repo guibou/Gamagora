@@ -2,6 +2,7 @@ mod vec;
 mod tonemap;
 mod ray;
 mod intersection;
+mod cube;
 
 use image::ImageBuffer;
 use vec::*;
