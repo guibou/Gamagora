@@ -8,6 +8,6 @@ pub struct Ray
 
 pub fn get_intersection_point_t(ray: &Ray, t:f32) -> Vec3
 {
-   add_vector(&ray.origin, &mul_scalar_vector(t, &ray.direction))
+   ray.origin + t * ray.direction
 }
 

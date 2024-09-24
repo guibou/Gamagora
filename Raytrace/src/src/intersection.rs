@@ -11,12 +11,12 @@ pub struct Sphere
 
 pub fn intersect_sphere(ray: &Ray, sphere: &Sphere) -> Option<f32>
 {
-    let oc = subtract_vector(&ray.origin, &sphere.center);
+    let oc = ray.origin - sphere.center;
 
     // Note: we can simplify the value of a if ray direction is normalized
-    let a = length_squared(&ray.direction);
-    let b = 2.0 * dot(&oc, &ray.direction);
-    let c = length_squared(&oc) - sq(sphere.radius);
+    let a = ray.direction.length_squared();
+    let b = 2.0 * &ray.direction.dot(&oc);
+    let c = oc.length_squared() - sq(sphere.radius);
 
     let delta = sq(b) - 4.0 * a * c;
 
@@ -67,9 +67,9 @@ fn intersect(&self, ray: &Ray) -> Option<Intersection>
     {
       Some(t) => {
           let p = get_intersection_point_t(ray, t);
-          let n = normalize(&subtract_vector(&p, &self.center));
+          let n = (p - self.center).normalize();
 
-          Some(Intersection{point: p, normal: n, distance: t * length(&ray.direction), albedo: self.albedo})
+          Some(Intersection{point: p, normal: n, distance: t * ray.direction.length(), albedo: self.albedo})
       }
       None => None,
     }

@@ -58,7 +58,7 @@ fn main() {
             let pixel = Vec3{y: y*2.0 -h, x: x*2.0 - w, z: 0.0};
 
             let focal_point = Vec3{x:0.0, y:0.0, z: -focal};
-            let direction = subtract_vector(&pixel, &focal_point);
+            let direction = pixel - focal_point;
 
             let ray = Ray {
                 // We start from the screen and note the "focal point"
@@ -76,19 +76,19 @@ fn main() {
                 {
                    for light in &scene.lights
                    {
-                     let to_light = subtract_vector(&light.origin, &it.point);
-                     let light_distance = length(&to_light);
-                     let cos = (dot(&normalize(&to_light), &it.normal)).clamp(0.0, 1.0);
+                     let to_light = light.origin - it.point;
+                     let light_distance = to_light.length();
+                     let cos = (to_light.normalize().dot(&it.normal)).clamp(0.0, 1.0);
 
                      // This is the amount of light, but not taking into account the visibilty
-                     let v = mul_vector(&mul_scalar_vector(cos / light_distance, &it.albedo), &light.emission);
+                     let v = cos / light_distance * it.albedo * light.emission;
 
                      // Visibility
                      // We shoot a ray toward the light
-                     let shadow_direction = normalize(&to_light);
+                     let shadow_direction = to_light.normalize();
                      // Let's add a small offset to the origin point of the ray, so it won't
                      // intersect the surface we are on.
-                     let origin_with_delta = add_vector(&it.point, &mul_scalar_vector(0.1, &shadow_direction));
+                     let origin_with_delta = it.point + 0.1 * shadow_direction;
                      let shadow_ray = Ray{origin: origin_with_delta, direction: shadow_direction};
             
                      // compute the intersection
@@ -108,7 +108,7 @@ fn main() {
                                 { 1.0 } else { 0.0 }
                         };
 
-                     contrib = add_vector(&mul_scalar_vector(visibility, &v), &contrib);
+                     contrib = contrib + visibility * v;
                    }
                 }
                 None => 
