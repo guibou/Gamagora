@@ -27,7 +27,8 @@ fn main() {
     let h:f32 = 600.0;
     let mut img = ImageBuffer::new(w as u32, h as u32);
 
-    /*
+    let radius = 180.0;
+
     let spheres = vec![
          Sphere{radius, center: Vec3{x: 0.0, y: 0.0, z: 200.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}},
          Sphere{radius, center: Vec3{x: -300.0, y: -300.0, z: 200.0}, albedo: Vec3{x: 0.0, y: 0.0, z: 1.0}},
@@ -37,17 +38,19 @@ fn main() {
          // Sol
          Sphere{radius: 50000.0, center: Vec3{x: 0.0, y: 50000.0 + 800.0, z: 0.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}},
        ];
-    */
+
     let lights = vec![
           Light{origin: Vec3{x: 5000.0, y: 0.0, z: 0.0}, emission: Vec3{x: 400000.0, y:400000.0, z:400000.0}},
           Light{origin: Vec3{x: 1.0, y: -1000.0, z: 0.0}, emission: Vec3{x: 100000.0, y:0.0, z:0.0}},
           Light{origin: Vec3{x: -1000.0, y: 1000.0, z: 0.0}, emission: Vec3{x: 0.0, y:100000.0, z:0.0}}
          ];
 
+    /*
     let mut spheres = vec![];
     let n = 100;
     let d = 300.0 / (n as f32);
     let radius = 80.0 / (n as f32);
+    */
 
     /*
      * timings
@@ -57,6 +60,8 @@ fn main() {
      * n = 10: 17s (8000 spheres)
      * n = 15: 71s (27000 spheres)
      */
+
+    /*
     for i in -n..n
     {
         for j in -n..n
@@ -69,6 +74,7 @@ fn main() {
             }
         }
     }
+    */
 
     println!("Nb spheres: {}", spheres.len());
 
