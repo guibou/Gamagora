@@ -9,6 +9,8 @@ use vec::*;
 use tonemap::*;
 use ray::*;
 use intersection::*;
+use rand::prelude::*;
+use rand::distributions::{Distribution, Uniform};
 
 struct Light
 {
@@ -90,10 +92,20 @@ fn main() {
 
         for px in 0..(w as u32)
         {
+            let mut contrib_pixel = Vec3{x: 0.0, y: 0.0, z: 0.0};
+            let nbSamples = 10;
+            for sample in 0..nbSamples
+            {
             let x = px as f32;
 
+            let between = Uniform::new(0.0, 1.0);
+            let mut rng = rand::thread_rng();
+
+            let ux = between.sample(&mut rng);
+            let uy = between.sample(&mut rng);
+
             // This is the pixel (note: that's one corner, we don't really care about that for now)
-            let pixel = Vec3{y: y*2.0 -h, x: x*2.0 - w, z: 0.0};
+            let pixel = Vec3{y: y*2.0 -h + uy, x: x*2.0 - w + ux, z: 0.0};
 
             let focal_point = Vec3{x:0.0, y:0.0, z: -focal};
             let direction = pixel - focal_point;
@@ -112,7 +124,13 @@ fn main() {
                 // We have some intersection
                 Some(it) =>
                 {
-                   for light in &scene.lights
+                   let between = Uniform::new(0, scene.lights.len());
+                   let mut rng = rand::thread_rng();
+                   let i = between.sample(&mut rng);
+                   let light = &scene.lights[i];
+                   let light_probability = 1.0 / (scene.lights.len() as f32);
+
+                   // for light in &scene.lights
                    {
                      let to_light = light.origin - it.point;
                      let light_distance = to_light.length();
@@ -146,15 +164,17 @@ fn main() {
                                 { 1.0 } else { 0.0 }
                         };
 
-                     contrib = contrib + visibility * v;
+                     contrib = contrib + (visibility / light_probability * v);
                    }
                 }
                 None => 
                 {
                 }
             }
+            contrib_pixel = contrib_pixel + contrib;
+            }
 
-            let pixel = tonemap(&contrib, 2.0);
+            let pixel = tonemap(&(contrib_pixel * (1.0 / (nbSamples as f32))), 2.0);
             img.put_pixel(px, py, pixel)
         }
     }
