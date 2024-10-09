@@ -8,8 +8,17 @@ pub struct Sphere
 {
     pub radius: f32,
     pub center: Vec3,
-    pub albedo: Vec3
+    pub albedo: Vec3,
+    pub bsdf: BSDF
 }
+
+#[derive(Copy, Clone)]
+pub enum BSDF {
+    Diffuse,
+    Mirror,
+    Glass(f32)
+}
+
 
 pub fn intersect_sphere(ray: &Ray, sphere: &Sphere) -> Option<f32>
 {
@@ -53,7 +62,8 @@ pub struct Intersection
     pub point: Vec3,
     pub normal: Vec3,
     pub distance: f32,
-    pub albedo: Vec3
+    pub albedo: Vec3,
+    pub bsdf: BSDF
 }
 
 pub trait Intersectable
@@ -71,7 +81,7 @@ fn intersect(&self, ray: &Ray) -> Option<Intersection>
           let p = get_intersection_point_t(ray, t);
           let n = (p - self.center).normalize();
 
-          Some(Intersection{point: p, normal: n, distance: t * ray.direction.length(), albedo: self.albedo})
+          Some(Intersection{point: p, normal: n, distance: t * ray.direction.length(), albedo: self.albedo, bsdf: self.bsdf})
       }
       None => None,
     }
