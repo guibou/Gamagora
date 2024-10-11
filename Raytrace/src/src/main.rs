@@ -38,7 +38,8 @@ fn main() {
          Sphere{radius: 40.0, center: Vec3{x: 0.0, y: 0.0, z: 50.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}, bsdf: BSDF::Diffuse},
 
          // Background sphere
-         Sphere{radius: 800.0, center: Vec3{x: 500.0, y: 1000.0, z: 2000.0}, albedo: Vec3{x: 0.9, y: 0.9, z: 0.9}, bsdf: BSDF::Glass(1.5)},
+         Sphere{radius: 500.0, center: Vec3{x: 700.0, y: 350.0, z: 1500.0}, albedo: Vec3{x: 0.9, y: 0.9, z: 0.9}, bsdf: BSDF::Glass(1.5)},
+         Sphere{radius: 200.0, center: Vec3{x: 700.0, y: 350.0, z: 3000.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 0.0}, bsdf: BSDF::Diffuse},
 
          // Sol
          Sphere{radius: 50000.0, center: Vec3{x: 0.0, y: 50000.0 + 800.0, z: 0.0}, albedo: Vec3{x: 1.0, y: 1.0, z: 1.0}, bsdf: BSDF::Diffuse},
@@ -211,23 +212,31 @@ fn raytrace(ray: &Ray, scene: &Scene, depth: u32) -> Vec3
                                  };
                             let refract_directionM = refract(&ray.direction.normalize(), &n, eta2);
 
-                            match refract_directionM
+                            let c_refract = match refract_directionM
                             {
-                                Some(refract_direction) 
-                                => {
+                                Some(refract_direction) => {
+                                    let origin_with_delta = it.point + 0.01 * refract_direction;
+                                    let ray_refract = Ray{
+                                        origin: origin_with_delta,
+                                        direction: refract_direction
+                                    };
+                                    let contrib_refract = raytrace(&ray_refract, &scene, depth + 1);
+                                    contrib_refract * it.albedo
+                                    // Vec3{x: 2000.0, y: 0.0, z: 2000.0}
 
-                            let origin_with_delta = it.point + 0.1 * refract_direction;
-                            let ray_refract = Ray{
-                                origin: origin_with_delta,
-                                direction: refract_direction
-                            };
-                            let contrib_refract = raytrace(&ray_refract, &scene, depth + 1);
-                            contrib_refract * it.albedo
                                 },
-                                None => contrib_mirror(ray, &it, scene, depth) * it.albedo
-                            }
+                                None => 
+                                {
+                                     // Vec3{x: 0.0, y: 2000.0, z: 0.0}
+                                     Vec3{x: 0.0, y: 000.0, z: 0.0}
+                                }
+                            };
 
+                            let c_miror = contrib_mirror(ray, &it, scene, depth) * it.albedo;
 
+                            let r = schlick(1.0, eta, ray.direction.normalize().dot(&it.normal).abs());
+
+                            (1.0 - r) * c_refract + r * c_miror
                         }
                     }
                 }
@@ -276,4 +285,10 @@ fn contrib_mirror(ray: &Ray, it: &Intersection, scene: &Scene, depth: u32) -> Ve
                             contrib_mirror * it.albedo
 
 
+}
+
+fn schlick(n1:f32, n2: f32, cos_theta: f32) -> f32
+{
+    let r0 = ((n1 - n2) / (n1 + n2)).powf(2.0);
+    r0 + (1.0 - r0) * (1.0 - cos_theta).powf(5.0)
 }
