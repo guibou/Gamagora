@@ -135,5 +135,11 @@ while True:
   a = calcul_de_a
   (pt_minus_dt, pt) = (pt, 2 * pt - pt_minus_dt + dt ^ 2 * 2)
   t += dt
+```
+
+
+![](assets/bridge_phisic.png)
+
+
 
 

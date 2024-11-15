@@ -205,6 +205,16 @@ fn raytrace(ray: &Ray, scene: &Scene, depth: u32) -> Vec3
                             contrib_mirror(ray, &it, scene, depth) * it.albedo
                         },
                         BSDF::Glass(eta) => {
+                            let between = Uniform::new(0.0, 1.0);
+                            let mut rng = rand::thread_rng();
+
+                            let u = between.sample(&mut rng);
+
+                            let r = schlick(1.0, eta, ray.direction.normalize().dot(&it.normal).abs());
+
+                            let threshold = 1.0 - r;
+
+
                             let (n, eta2) = if ray.direction.dot(&it.normal) < 0.0 {
                                   (it.normal, eta)
                                  } else {
@@ -215,13 +225,20 @@ fn raytrace(ray: &Ray, scene: &Scene, depth: u32) -> Vec3
                             let c_refract = match refract_directionM
                             {
                                 Some(refract_direction) => {
-                                    let origin_with_delta = it.point + 0.01 * refract_direction;
-                                    let ray_refract = Ray{
-                                        origin: origin_with_delta,
-                                        direction: refract_direction
-                                    };
-                                    let contrib_refract = raytrace(&ray_refract, &scene, depth + 1);
-                                    contrib_refract * it.albedo
+                                    if(u < threshold)
+                                    {
+                                      let origin_with_delta = it.point + 0.01 * refract_direction;
+                                      let ray_refract = Ray{
+                                          origin: origin_with_delta,
+                                          direction: refract_direction
+                                      };
+                                      let contrib_refract = raytrace(&ray_refract, &scene, depth + 1);
+                                      contrib_refract * it.albedo * (1.0 / threshold)
+                                    }
+                                    else
+                                    {
+                                        Vec3{x: 0.0, y: 0.0, z: 0.0}
+                                    }
                                     // Vec3{x: 2000.0, y: 0.0, z: 2000.0}
 
                                 },
@@ -232,9 +249,16 @@ fn raytrace(ray: &Ray, scene: &Scene, depth: u32) -> Vec3
                                 }
                             };
 
-                            let c_miror = contrib_mirror(ray, &it, scene, depth) * it.albedo;
+                            let c_miror = 
+                                if(u > threshold)
+                                {
+                                   contrib_mirror(ray, &it, scene, depth) * it.albedo * (1.0 / (1.0 - threshold))
+                                }
+                               else
+                                {
+                                    Vec3{x: 0.0, y: 0.0, z: 0.0}
+                                };
 
-                            let r = schlick(1.0, eta, ray.direction.normalize().dot(&it.normal).abs());
 
                             (1.0 - r) * c_refract + r * c_miror
                         }
@@ -292,3 +316,22 @@ fn schlick(n1:f32, n2: f32, cos_theta: f32) -> f32
     let r0 = ((n1 - n2) / (n1 + n2)).powf(2.0);
     r0 + (1.0 - r0) * (1.0 - cos_theta).powf(5.0)
 }
+
+
+/*
+ *
+ *
+ *  mesure = x
+ *  probabilité: p
+ *
+ *  contribution = x / p
+ *
+ *
+ *
+ *  0.1 / 0.1 => 1
+ *  0.9 / 0.9 => 1
+ *
+ *
+ *
+ */
+

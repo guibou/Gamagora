@@ -89,3 +89,67 @@ p'' = p' + t = p * s + t
 # Rotation
 
 La prochaine fois.
+
+
+## Big shader
+
+
+```
+
+vec2 translation(vec2 i)
+{
+    return i + vec2(-0.5 * sin(iTime), -0.5 * sin(iTime));
+}
+
+vec2 scale(vec2 i)
+{
+    return vec2(abs(sin(iTime)), abs(sin(iTime))) * i;
+}
+
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec3 pointC = vec3(fragCoord/iResolution.xy, 0);
+    
+    vec2 points[3];
+
+    points[0] = vec2(0.5, 0.5);
+    points[1] = vec2 (0.5, 1);
+    points[2] = vec2 (0.7, 0.7);
+        
+    int nbPoints = 3;
+    
+    // Applique la transformation
+    for(int i = 0; i < nbPoints; i++)
+    {
+        // points[i] = translation(scale(points[i]));
+        points[i] = scale(translation(points[i]));
+    }
+   
+
+    bool inside = true;
+    
+    for(int i = 0; i < nbPoints; i++)
+    {
+      vec3 pointA = vec3(points[i], 0);
+      vec3 pointB = vec3(points[(i+1) % nbPoints], 0);
+      vec3 res = cross(pointB - pointA, pointC - pointA);
+    
+      if(res.z > 0.0)
+         inside = false;
+    }
+    
+    
+    if(inside)
+    {
+    
+       fragColor = vec4(1, 0, 0, 1);
+    }
+    else
+    {
+      fragColor = vec4(0, 1, 0, 1);
+    }
+
+}
+
+```
