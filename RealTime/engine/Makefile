@@ -1,5 +1,5 @@
-CXXFLAGS=-Iglad/include
-CFLAGS=-Iglad/include
+CXXFLAGS=-Iglad/include -g -ggdb
+CFLAGS=-Iglad/include -g -ggdb
 LDFLAGS=-lglfw -lGL
 
 main: src/main.o src/shader.o glad/src/glad.o

@@ -87,7 +87,7 @@ int main(void) {
   glUseProgram(program);
 
   // Buffers
-  GLuint vbo, vao;
+  GLuint vbo, vao, vbo_color;
 
   // Attention à l'api avec des pointeurs
   // Souvent, en python par example:
@@ -100,7 +100,10 @@ int main(void) {
   //    glGenBuffers (pre Direct State Access "ancienne API", associée avec des
   //    "binds")
   glCreateBuffers(1, &vbo);
+  glCreateBuffers(1, &vbo_color);
   std::vector<float> vertices;
+
+  /*
   int nbPoints = 100;
   float pi = 3.14;
   float radius = 1;
@@ -111,9 +114,47 @@ int main(void) {
     vertices.emplace_back(std::cos(angle) * radius);
     vertices.emplace_back(std::sin(angle) * radius);
   }
+  */
+
+  // Deux triangles
+  /*
+  vertices.push_back(-0.5);
+  vertices.push_back(-0.5);
+  vertices.push_back(-0.5);
+  vertices.push_back(0.5);
+  vertices.push_back(0.5);
+  vertices.push_back(0.5);
+
+  vertices.push_back(0.5);
+  vertices.push_back(0.5);
+  vertices.push_back(0.5);
+  vertices.push_back(-0.5);
+  vertices.push_back(-0.5);
+  vertices.push_back(-0.5);
+  */
+
+  // Triangle strip
+  vertices.push_back(-0.5);
+  vertices.push_back(0.5);
+  vertices.push_back(0.5);
+  vertices.push_back(0.5);
+  vertices.push_back(-0.5);
+  vertices.push_back(-0.5);
+
+  vertices.push_back(0.5);
+  vertices.push_back(-0.5);
+
+  std::vector<float> colors {
+      1, 0, 0,
+      0, 1, 0,
+      0, 0, 1,
+      1, 1, 1
+  };
 
   // Copy des données dans le GPU
   glNamedBufferData(vbo, sizeof(vertices[0]) * vertices.size(), vertices.data(),
+                    GL_DYNAMIC_DRAW);
+  glNamedBufferData(vbo_color, sizeof(colors[0]) * colors.size(), colors.data(),
                     GL_DYNAMIC_DRAW);
   std::cout << "Nb points: " << vertices.size() / 2 << std::endl;
 
@@ -132,6 +173,21 @@ int main(void) {
 
   // Associer au buffer
   glVertexArrayVertexBuffer(vao, binding_point, vbo, 0, 2 * sizeof(float));
+
+  // Binding pour les couleurs
+  const auto index_colors = 1;
+  const auto binding_point_colors = 1;
+
+  // Position
+  // An active l'index_colors (arbitraire, 1, c'est un choix) dans le vao
+  glEnableVertexArrayAttrib(vao, index_colors);
+  // Associé à cet index_colors, on aura des floats, par packet de 2
+  glVertexArrayAttribFormat(vao, index_colors, 3, GL_FLOAT, GL_FALSE, 0);
+  // On va associer à l'index_colors, le point "location" dans le shader
+  glVertexArrayAttribBinding(vao, index_colors, binding_point_colors);
+
+  // Associer au buffer
+  glVertexArrayVertexBuffer(vao, binding_point_colors, vbo_color, 0, 3 * sizeof(float));
 
   glClearColor(0.5, 0.8, 0.2, 1.0);
 
@@ -153,7 +209,7 @@ int main(void) {
     glBindVertexArray(vao);
 
     glEnable(GL_PROGRAM_POINT_SIZE);
-    glDrawArrays(GL_LINE_LOOP, 0, vertices.size() / 2);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, vertices.size() / 2);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
