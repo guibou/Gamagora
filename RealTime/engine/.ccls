@@ -1,0 +1,3 @@
+clang
+-Iglad/include
+-std=c++11
