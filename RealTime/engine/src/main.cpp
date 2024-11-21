@@ -104,10 +104,22 @@ int main(void)
     //    glCreateBuffers: nouvelle api, sans binds, avec des "Named" functions.
     //    glGenBuffers (pre Direct State Access "ancienne API", associée avec des "binds")
     glCreateBuffers(1, &vbo);
-    float vertices[] = {-0.5, -0.5, 0.5, 0.5, 1, 0};
+    std::vector<float> vertices;
+    int nbPoints = 100;
+    float pi = 3.14;
+    float radius = 1;
+
+    // Calcul des differents points sur un cerlce
+    for(int i = 0; i < nbPoints; i++)
+    {
+        float angle = float(i) / nbPoints * 2 * pi;
+        vertices.emplace_back(std::cos(angle) * radius);
+        vertices.emplace_back(std::sin(angle) * radius);
+    }
+
     // Copy des données dans le GPU
-    glNamedBufferData(vbo, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-    std::cout << "Nb points: " << sizeof(vertices) / sizeof(float) / 2 << std::endl;
+    glNamedBufferData(vbo, sizeof(vertices[0]) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
+    std::cout << "Nb points: " << vertices.size() / 2 << std::endl;
 
     // Bindings
     glCreateVertexArrays(1, &vao);
@@ -122,6 +134,7 @@ int main(void)
     // On va associer à l'index, le point "location" dans le shader
     glVertexArrayAttribBinding(vao, index, binding_point);
 
+    // Associer au buffer
     glVertexArrayVertexBuffer(vao, binding_point, vbo, 0, 2 * sizeof(float));
 
     glClearColor(0.5, 0.8, 0.2, 1.0);
@@ -145,7 +158,7 @@ int main(void)
         glBindVertexArray(vao);
 
         glEnable(GL_PROGRAM_POINT_SIZE);
-        glDrawArrays(GL_POINTS, 0, sizeof(vertices) / sizeof(float) / 2);
+        glDrawArrays(GL_LINE_LOOP, 0, vertices.size() / 2);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
