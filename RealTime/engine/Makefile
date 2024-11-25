@@ -1,6 +1,6 @@
 CXXFLAGS=-Iglad/include -g -ggdb
 CFLAGS=-Iglad/include -g -ggdb
-LDFLAGS=-lglfw -lGL
+LDFLAGS=-lglfw -lGL -lassimp
 
 main: src/main.o src/shader.o glad/src/glad.o
 	g++ src/main.o src/shader.o glad/src/glad.o ${LDFLAGS} -o main

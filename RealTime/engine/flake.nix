@@ -10,7 +10,7 @@
           pkgs = nixpkgs.legacyPackages.x86_64-linux;
         in
         pkgs.mkShell {
-          buildInputs = with pkgs; [ cmake glfw glm cimg fontconfig xorg.libX11 apitrace ccls ];
+          buildInputs = with pkgs; [ cmake glfw glm assimp cimg fontconfig xorg.libX11 apitrace ccls ];
         };
     };
 }
