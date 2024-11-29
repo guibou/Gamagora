@@ -16,6 +16,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <assimp/Importer.hpp>
@@ -43,6 +44,8 @@ void APIENTRY opengl_error_callback(GLenum source, GLenum type, GLuint id,
 
 using glm::mat4;
 using glm::vec4;
+using glm::vec3;
+using glm::vec2;
 
 int main(void) {
   // Creation du context openGL avec glfw
@@ -56,7 +59,7 @@ int main(void) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
   glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 
-  window = glfwCreateWindow(800, 800, "Gamagora triangle", NULL, NULL);
+  window = glfwCreateWindow(800, 800, "", NULL, NULL);
 
   if (!window) {
     glfwTerminate();
@@ -91,10 +94,8 @@ int main(void) {
   const auto fragment = MakeShader(GL_FRAGMENT_SHADER, "shader.frag");
   const auto program = AttachAndLink({vertex, fragment});
 
-  glUseProgram(program);
-
   // Buffers
-  GLuint vbo, vao, vbo_color;
+  GLuint vbo, vao, vbo_normal, vbo_uvs;
 
   // Attention à l'api avec des pointeurs
   // Souvent, en python par example:
@@ -107,8 +108,11 @@ int main(void) {
   //    glGenBuffers (pre Direct State Access "ancienne API", associée avec des
   //    "binds")
   glCreateBuffers(1, &vbo);
-  glCreateBuffers(1, &vbo_color);
-  std::vector<float> vertices;
+  glCreateBuffers(1, &vbo_normal);
+  glCreateBuffers(1, &vbo_uvs);
+  std::vector<vec3> vertices;
+  std::vector<vec3> normals;
+  std::vector<vec2> uvs;
 
   /*
   int nbPoints = 100;
@@ -163,7 +167,7 @@ int main(void) {
 
   // The famous importer
   Assimp::Importer importer;
-  auto path = "/home/guillaume/backup-guillaume/logo.obj";
+  auto path = "logo.obj";
   auto scene = importer.ReadFile(
       path, aiProcess_CalcTangentSpace | aiProcess_Triangulate |
                 aiProcess_JoinIdenticalVertices | aiProcess_SortByPType |
@@ -184,9 +188,12 @@ int main(void) {
     assert(face.mNumIndices == 3);
     for (int idx = 0; idx < 3; ++idx) {
       auto v = mesh->mVertices[face.mIndices[idx]];
-      vertices.push_back(v.x);
-      vertices.push_back(v.y);
-      vertices.push_back(v.z);
+      vertices.push_back(vec3(v.x, v.y, v.z));
+      auto n = mesh->mNormals[face.mIndices[idx]];
+      normals.push_back(vec3(n.x, n.y, n.z));
+
+      auto uv = mesh->mTextureCoords[0][face.mIndices[idx]];
+      uvs.push_back(vec2(uv.x, uv.y));
     }
   }
 
@@ -201,12 +208,10 @@ int main(void) {
   std::vector<float> colors;
 
   // Copy des données dans le GPU
-  glNamedBufferData(vbo, sizeof(vertices[0]) * vertices.size(), vertices.data(),
-                    GL_DYNAMIC_DRAW);
-  // glNamedBufferData(vbo_color, sizeof(colors[0]) * colors.size(),
-  // colors.data(),
-  //                   GL_DYNAMIC_DRAW);
-  std::cout << "Nb points: " << vertices.size() / 3 << std::endl;
+  glNamedBufferData(vbo, sizeof(vertices[0]) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
+  glNamedBufferData(vbo_normal, sizeof(normals[0]) * normals.size(), normals.data(), GL_DYNAMIC_DRAW);
+  glNamedBufferData(vbo_uvs, sizeof(uvs[0]) * uvs.size(), uvs.data(), GL_DYNAMIC_DRAW);
+  std::cout << "Nb points: " << vertices.size() << std::endl;
 
   // Bindings
   glCreateVertexArrays(1, &vao);
@@ -225,24 +230,48 @@ int main(void) {
   glVertexArrayVertexBuffer(vao, binding_point, vbo, 0, 3 * sizeof(float));
 
   // Binding pour les couleurs
-  const auto index_colors = 1;
-  const auto binding_point_colors = 1;
+  const auto index_normals = 1;
+  const auto binding_point_normals = 1;
 
   // Position
-  // An active l'index_colors (arbitraire, 1, c'est un choix) dans le vao
-  // glEnableVertexArrayAttrib(vao, index_colors);
-  // Associé à cet index_colors, on aura des floats, par packet de 2
-  glVertexArrayAttribFormat(vao, index_colors, 3, GL_FLOAT, GL_FALSE, 0);
-  // On va associer à l'index_colors, le point "location" dans le shader
-  glVertexArrayAttribBinding(vao, index_colors, binding_point_colors);
+  // An active l'index_normals (arbitraire, 1, c'est un choix) dans le vao
+  glEnableVertexArrayAttrib(vao, index_normals);
+  // Associé à cet index_normals, on aura des floats, par packet de 2
+  glVertexArrayAttribFormat(vao, index_normals, 3, GL_FLOAT, GL_FALSE, 0);
+  // On va associer à l'index_normals, le point "location" dans le shader
+  glVertexArrayAttribBinding(vao, index_normals, binding_point_normals);
 
   // Associer au buffer
-  glVertexArrayVertexBuffer(vao, binding_point_colors, vbo_color, 0,
+  glVertexArrayVertexBuffer(vao, binding_point_normals, vbo_normal, 0,
                             3 * sizeof(float));
 
+  const auto index_uvs = 2;
+  const auto binding_point_uvs = 2;
+
+  // Position
+  // An active l'index_uvs (arbitraire, 1, c'est un choix) dans le vao
+  glEnableVertexArrayAttrib(vao, index_uvs);
+  // Associé à cet index_uvs, on aura des floats, par packet de 2
+  glVertexArrayAttribFormat(vao, index_uvs, 2, GL_FLOAT, GL_FALSE, 0);
+  // On va associer à l'index_uvs, le point "location" dans le shader
+  glVertexArrayAttribBinding(vao, index_uvs, binding_point_uvs);
+
+  // Associer au buffer
+  glVertexArrayVertexBuffer(vao, binding_point_uvs, vbo_uvs, 0,
+                            2 * sizeof(float));
+
   glClearColor(0.5, 0.8, 0.2, 1.0);
+  glEnable(GL_DEPTH_TEST);
 
   float previousTime = glfwGetTime();
+
+  vec3 light_world_position(10, 10, 10);
+
+  // Change la lampe de place
+  glProgramUniform3fv(program, 2, 1, glm::value_ptr(light_world_position));
+
+  glUseProgram(program);
+  glBindVertexArray(vao);
 
   while (!glfwWindowShouldClose(window)) {
     float time = glfwGetTime();
@@ -252,52 +281,47 @@ int main(void) {
     int w, h;
     glfwGetWindowSize(window, &w, &h);
 
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+
+    // Normalize cursor pos
+    float mouseU = xpos / w;
+    float mouseV = ypos / h;
+
+    std::cout << mouseU << std::endl;
+
     // en x, le [-1;1] <=> (0, w)
     // en y, le [-1;1] <=> (0, h)
     glViewport(0, 0, w, h);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glBindVertexArray(vao);
 
     {
-      // scale /5
-      mat4 scale = mat4(vec4(0.2, 0, 0, 0), vec4(0, 0.2, 0, 0),
-                        vec4(0, 0, 0.2, 0), vec4(0, 0, 0, 1));
+      mat4 perspective = glm::perspective(3.14f / 8.f, float(w) / float(h), 1.0f, 1000.0f);
+      float theta = mouseU * 2 * 3.14;
+      float phi = mouseV * 3.14;
+      mat4 camera = glm::lookAt(100.f * vec3(
+                  std::sin(phi) * std::cos(theta),
+                  std::sin(phi) * std::sin(theta),
+                  std::cos(phi)),
+              vec3(0, 0, 0), vec3(0, 0, 1));
 
-      mat4 translate = mat4(vec4(1, 0, 0, -0.5), vec4(0, 1, 0, 0),
-                            vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
+      mat4 object_to_world = glm::rotate(3.14f / 2, vec3(1, 0, 0)) * glm::rotate(3.14f / 2, vec3(0, 1, 0));
+      mat4 object_to_world_normal = glm::transpose(glm::inverse(object_to_world));
+      mat4 camera_to_world = glm::inverse(camera);
 
-      float dw = time;
-      mat4 rotation =
-          mat4(vec4(cos(dw), -sin(dw), 0, 0), vec4(sin(dw), cos(dw), 0, 0),
-               vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
-
-      mat4 transformation = scale * rotation * translate;
-      glProgramUniformMatrix4fv(program, 0, 1, false,
+      mat4 transformation = perspective * camera * object_to_world;
+      glProgramUniformMatrix4fv(program, 0, 1, true,
                                 glm::value_ptr(transformation));
 
-      glProgramUniform4f(program, 1, 0, 1, 0, 1);
-      glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 3);
-    }
-
-    { // scale /5
-      mat4 scale = mat4(vec4(0.2, 0, 0, 0), vec4(0, 0.2, 0, 0),
-                        vec4(0, 0, 0.2, 0), vec4(0, 0, 0, 1));
-
-      mat4 translate = mat4(vec4(1, 0, 0, 0.5), vec4(0, 1, 0, 0),
-                            vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
-
-      float dw = time;
-      mat4 rotation =
-          mat4(vec4(cos(dw), -sin(dw), 0, 0), vec4(sin(dw), cos(dw), 0, 0),
-               vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
-
-      mat4 transformation = scale * rotation * translate;
-      glProgramUniformMatrix4fv(program, 0, 1, false,
-                                glm::value_ptr(transformation));
-
-      glProgramUniform4f(program, 1, 1, 0, 0, 1);
-      glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 3);
+      glProgramUniformMatrix4fv(program, 3, 1, true,
+                                glm::value_ptr(object_to_world));
+      glProgramUniformMatrix4fv(program, 4, 1, true,
+                                glm::value_ptr(object_to_world_normal));
+      glProgramUniformMatrix4fv(program, 5, 1, true,
+                                glm::value_ptr(camera_to_world));
+      glProgramUniform4fv(program, 1, 1, glm::value_ptr(vec3(1, 1, 0)));
+      glDrawArrays(GL_TRIANGLES, 0, vertices.size());
     }
 
     glfwSwapBuffers(window);
