@@ -24,6 +24,8 @@
 #include <assimp/scene.h>
 
 #include "shader.h"
+#include "image.h"
+
 
 static void error_callback(int /*error*/, const char *description) {
   std::cerr << "Error: " << description << std::endl;
@@ -259,6 +261,15 @@ int main(void) {
   // Associer au buffer
   glVertexArrayVertexBuffer(vao, binding_point_uvs, vbo_uvs, 0,
                             2 * sizeof(float));
+
+
+  // textures
+  auto [image, imageWidth, imageHeight] = load_image("texture_guibou.png");
+  std::cout << image.size() << " " << imageWidth << " " << imageHeight << std::endl;
+
+    // IcI: charger l'image dans une texture GL
+    // ....
+
 
   glClearColor(0.5, 0.8, 0.2, 1.0);
   glEnable(GL_DEPTH_TEST);
