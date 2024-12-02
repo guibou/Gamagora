@@ -269,7 +269,39 @@ int main(void) {
 
     // IcI: charger l'image dans une texture GL
     // ....
+    //
+    // ATtention: glTexXXX: mutable object
+    //            glTextureStorage: immutable object
+    //
+    //            ATTENTION au packing, alignment!
+    // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glPixelStore.xhtml
 
+  GLuint textureId;
+  glCreateTextures(GL_TEXTURE_2D, 1, &textureId);
+  glTextureStorage2D(textureId,
+          // TODO: what are texture levels?
+           1,
+          // Internal format
+          GL_RGB8,
+          imageWidth,
+          imageHeight
+        );
+  glTextureSubImage2D(textureId,
+           // level
+           0,
+           // offsets
+           0, 0,
+           // sizes
+           imageWidth,
+           imageHeight,
+           GL_RGB,
+           GL_UNSIGNED_BYTE,
+           image.data()
+          );
+
+  // Attach my texture to a unit
+  // 0 is the binding!
+  glBindTextureUnit(0, textureId);
 
   glClearColor(0.5, 0.8, 0.2, 1.0);
   glEnable(GL_DEPTH_TEST);

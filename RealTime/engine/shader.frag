@@ -13,6 +13,8 @@ layout(location=2) uniform vec3 light_position;
 
 layout(location=5) uniform mat4 camera_to_world;
 
+layout(binding=0) uniform sampler2D myTexture;
+
 void main()
 {
     // Quantité de lumière:
@@ -40,5 +42,5 @@ void main()
     vec3 light_contrib = color_uniform.xyz / d2 * f * light_emission * cos_term;
 
     bool n = isnan(f);
-    color = vec4(light_contrib + emit, 1);
+    color = vec4(texture(myTexture, uv_frag).xyz + emit, 1);
 }
